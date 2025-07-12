@@ -1,1 +1,200 @@
-sample.html
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Tile Calculator - RK Tiles Works</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu&display=swap" rel="stylesheet">
+  <style>
+    #reportPDF {
+      padding: 20px;
+      border: 2px dashed #555;
+      font-family: 'Noto Sans Telugu', Arial, sans-serif;
+      color: #333;
+    }
+    #reportPDF h2 {
+      color: #c0392b;
+      margin-bottom: 0;
+    }
+    #reportPDF p {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #555;
+    }
+    #reportPDF ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+    #reportPDF ul li {
+      padding: 10px;
+      background: #f0f0f0;
+      border-left: 5px solid #c0392b;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    #reportPDF h3 {
+      background: #c0392b;
+      color: #fff;
+      padding: 10px;
+      margin-top: 30px;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .delete-btn {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧱 RK TILES WORKS</h1>
+  <p><strong>Cell:</strong> 9581996651</p>  <form id="tileForm">
+    <div id="areasContainer">
+      <div class="area-section">
+        <h2>Area 1</h2>
+        <label>Area Name: <input type="text" name="areaName[]" required></label>
+        <label>Type:
+          <select name="type[]">
+            <option value="floor">Floor</option>
+            <option value="wall">Wall</option>
+          </select>
+        </label>
+        <label>Length (ft): <input type="number" name="length[]" step="0.1" required></label>
+        <label>Width (ft): <input type="number" name="width[]" step="0.1" required></label>
+        <label class="wall-input">Height (ft): <input type="number" name="height[]" step="0.1"></label>
+        <label>Include Side Border? <input type="checkbox" name="border[]"></label>
+        <button type="button" class="delete-btn" onclick="deleteArea(this)">❌ Delete</button>
+      </div>
+    </div>
+    <button type="button" onclick="addArea()">➕ Add More Area</button><button type="submit">🧮 Calculate Total Square Foot</button>
+
+  </form>  <div id="result"></div>
+  <button onclick="generatePDF()">🖨 Print/Download Report</button>  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>  <script>
+    let areaCount = 1;
+
+    const areaTranslation = {
+      "ROOM": "గది",
+      "BATHROOM": "బాత్రూమ్",
+      "BATH ROOM": "బాత్రూమ్",
+      "TOILET": "టాయిలెట్",
+      "KITCHEN": "వంటగది",
+      "HALL": "హాల్",
+      "PARKING": "పార్కింగ్",
+      "CORRIDOR": "ప్రాంగణం",
+      "WASH AREA": "వాష్ ఏరియా"
+    };
+
+    function translateAreaName(name) {
+      let translated = name;
+      for (const [key, telugu] of Object.entries(areaTranslation)) {
+        const pattern = new RegExp(key, 'gi');
+        translated = translated.replace(pattern, telugu);
+      }
+      return translated;
+    }
+
+    function addArea() {
+      areaCount++;
+      const container = document.getElementById('areasContainer');
+      const section = document.createElement('div');
+      section.className = 'area-section';
+      section.innerHTML = `
+        <h2>Area ${areaCount}</h2>
+        <label>Area Name: <input type="text" name="areaName[]" required></label>
+        <label>Type:
+          <select name="type[]">
+            <option value="floor">Floor</option>
+            <option value="wall">Wall</option>
+          </select>
+        </label>
+        <label>Length (ft): <input type="number" name="length[]" step="0.1" required></label>
+        <label>Width (ft): <input type="number" name="width[]" step="0.1" required></label>
+        <label class="wall-input">Height (ft): <input type="number" name="height[]" step="0.1"></label>
+        <label>Include Side Border? <input type="checkbox" name="border[]"></label>
+        <button type="button" class="delete-btn" onclick="deleteArea(this)">❌ Delete</button>
+      `;
+      container.appendChild(section);
+    }
+
+    function deleteArea(button) {
+      const section = button.closest('.area-section');
+      section.remove();
+    }
+
+    document.getElementById('tileForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const areaNames = document.getElementsByName('areaName[]');
+      const types = document.getElementsByName('type[]');
+      const lengths = document.getElementsByName('length[]');
+      const widths = document.getElementsByName('width[]');
+      const heights = document.getElementsByName('height[]');
+      const borders = document.getElementsByName('border[]');
+
+      let output = '<div id="reportPDF"><h2 style="text-align:center">🧱 RK TILES WORKS</h2><p style="text-align:center">Cell: 9581996651</p><h3>Tile Area Requirement Report (in ft²)</h3><ul>';
+      let grandTotalArea = 0;
+      let grandTotalBorderPieces = 0;
+      let grandTotalBorderSqft = 0;
+
+      for (let i = 0; i < areaNames.length; i++) {
+        const rawName = areaNames[i].value;
+        const name = translateAreaName(rawName);
+        const type = types[i].value;
+        const length = parseFloat(lengths[i].value);
+        const width = parseFloat(widths[i].value);
+        const height = parseFloat(heights[i].value || 0);
+        const includeBorder = borders[i].checked;
+
+        let area = 0;
+        let borderFeet = 0;
+
+        if (type === 'floor') {
+          area = length * width;
+          if (includeBorder) borderFeet = 2 * (length + width);
+        } else {
+          area = 2 * height * (length + width);
+          if (includeBorder) borderFeet = 4 * height;
+        }
+
+        let borderPieces = includeBorder ? Math.ceil(borderFeet) : 0;
+        let borderSqft = includeBorder ? (borderPieces / 3) : 0;
+        let totalArea = area + borderSqft;
+
+        grandTotalArea += totalArea;
+        grandTotalBorderPieces += borderPieces;
+        grandTotalBorderSqft += borderSqft;
+
+        output += `<li><strong>${name} (${type})</strong>: ${totalArea.toFixed(2)} ft² ${includeBorder ? `(+ ${borderPieces} border pieces = ${borderSqft.toFixed(2)} ft²)` : ''}</li>`;
+      }
+
+      output += `</ul><h3>Total Area Required: ${grandTotalArea.toFixed(2)} ft²</h3>`;
+      if (grandTotalBorderPieces > 0) {
+        output += `<h3>Total Border Material: ${grandTotalBorderPieces} pieces (Buy: ${grandTotalBorderSqft.toFixed(2)} ft²)</h3>`;
+      }
+      output += '</div>';
+
+      document.getElementById('result').innerHTML = output;
+    });
+
+    function generatePDF() {
+      const result = document.getElementById('reportPDF');
+      const opt = {
+        margin: 0.5,
+        filename: 'RK-Tiles-Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().from(result).set(opt).save();
+    }
+  </script></body>
+</html>
