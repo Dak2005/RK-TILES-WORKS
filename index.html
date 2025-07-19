@@ -197,3 +197,12 @@
     }
   </script></body>
 </html>
+call File.SaveFile
+    text: reportText
+    fileName: "/report.html"
+When File.AfterFileSaved
+→ set ActivityStarter.DataUri to "file:///storage/emulated/0/report.html"
+→ call ActivityStarter.StartActivity
+When Screen1.Initialize
+→ call File.RequestPermission
+    permissionName: "android.permission.WRITE_EXTERNAL_STORAGE"
